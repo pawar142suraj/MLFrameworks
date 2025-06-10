@@ -36,7 +36,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe',pe) #buffer of the module->it will be saved with file along with state of module
 
     def forward(self,x):
-        x = x+(self.pe[:, :x.shape[1], :]).requires_grad(False)
+        x = x+(self.pe[:, :x.shape[1], :]).requires_grad_(False)
         return self.dropout(x)
     
 
@@ -98,7 +98,7 @@ class MultiHeadAttention(nn.Module):
         
         return (attention_scores @ value), attention_scores
 
-    def forward(self, x, q, k , v, mask):
+    def forward(self, q, k , v, mask):
         query = self.w_q(q) #(Batch, seq_len, d_model) -> (Batch, seq_len, d_model) refer diagram for more info q is seq, d_model and w is d_model, d_model so w will be seq,d_model
         key = self.w_k(k) #(Batch, seq_len, d_model) -> (Batch, seq_len, d_model)
         value = self.w_v(v) #(Batch, seq_len, d_model) -> (Batch, seq_len, d_model)
@@ -109,7 +109,7 @@ class MultiHeadAttention(nn.Module):
         key = key.view( key.shape[0], key.shape[1], self.h, self.d_k).transpose(1,2)
         value = value.view( value.shape[0], value.shape[1], self.h, self.d_k).transpose(1,2)
 
-        x, self.attention_scores = MultiHeadAttention.attention(query, key, mask, self.dropout)
+        x, self.attention_scores = MultiHeadAttention.attention(query, key, value, mask, self.dropout)
 
         #(Batch,h,seq_len,d_k) --> #(Batch,seq_len,h,d_k) --> #(Batch,seq_len,d_model)
         x = x.transpose(1,2).contiguous().view(x.shape[0],-1,self.h*self.d_k)
@@ -176,6 +176,7 @@ class Decoder(nn.Module):
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         for layer in self.layers:
             x = layer(x,encoder_output, src_mask, tgt_mask)
+            print(x.shape)
         return self.norm(x)
     
 class ProjectionLayer(nn.Module):
